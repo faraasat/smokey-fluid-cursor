@@ -35,6 +35,8 @@ bun add smokey-fluid-cursor
 
 ## 📸 Demo
 
+Also see more details in ![Example](https://github.com/faraasat/smokey-fluid-cursor/tree/main/example):
+
 ![Demo](https://github.com/faraasat/smokey-fluid-cursor/blob/main/images/demo.gif)
 
 ---
