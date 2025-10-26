@@ -1,0 +1,38 @@
+{
+  "name": "smokey-fluid-cursor",
+  "version": "1.0.0",
+  "description": "A customizable fluid cursor effect for React applications. Enhance user experience with smooth, interactive cursor animations. Perfect for modern web designs.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/faraasat/smokey-fluid-cursor.git"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup && rm -rf dist/*.d.mts",
+    "release": "standard-version"
+  },
+  "keywords": [
+    "smokey cursor",
+    "fluid cursor",
+    "animated cursor",
+    "smokey fluid",
+    "javascript",
+    "typescript"
+  ],
+  "author": "Farasat Ali <63093876+faraasat@users.noreply.github.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.15",
+    "standard-version": "^9.5.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
