@@ -70,7 +70,7 @@ initFluid();
     <canvas id="smokey-fluid-canvas"></canvas>
 
     <script type="module">
-      import { initFluid } from "smokey-fluid-cursor/index.mjs";
+      import { initFluid } from "https://cdn.jsdelivr.net/npm/smokey-fluid-cursor@latest/dist/index.mjs";
 
       window.addEventListener("DOMContentLoaded", () => {
         initFluid();
@@ -97,7 +97,7 @@ initFluid();
   <body>
     <canvas id="smokey-fluid-canvas"></canvas>
 
-    <script src="smokey-fluid-cursor/index.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/smokey-fluid-cursor@latest/dist/index.global.js"></script>
 
     <script type="module">
       window.addEventListener("DOMContentLoaded", () => {
