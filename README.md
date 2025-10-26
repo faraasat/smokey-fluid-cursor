@@ -1,7 +1,7 @@
 <h1 align="center">🌊 Smokey Fluid Cursor</h1>
 
 <p align="center">
-A beautiful, interactive fluid simulation that creates stunning visual effects following your cursor movements. Built with WebGL for high-performance real-time fluid dynamics.
+A beautiful, interactive fluid simulation that creates stunning visual effects following your cursor movements for your JavaScript and TypeScript application on web. Built with WebGL for high-performance real-time fluid dynamics.
 </p>
 
 ![npm version](https://img.shields.io/npm/v/smokey-fluid-cursor.svg)
@@ -14,7 +14,6 @@ A beautiful, interactive fluid simulation that creates stunning visual effects f
 ![total downloads per week](https://img.shields.io/npm/dw/smokey-fluid-cursor.svg)
 ![total downloads per month](https://img.shields.io/npm/dm/smokey-fluid-cursor.svg)
 ![download-image](https://img.shields.io/npm/dm/smokey-fluid-cursor.svg)
-
 
 [![smokey-fluid-cursor](https://nodei.co/npm/smokey-fluid-cursor.png)](https://npmjs.org/package/smokey-fluid-cursor)
 
@@ -31,6 +30,12 @@ pnpm i smokey-fluid-cursor
 
 bun add smokey-fluid-cursor
 ```
+
+---
+
+## 📸 Demo
+
+![Demo](https://github.com/faraasat/smokey-fluid-cursor/blob/main/images/demo.gif)
 
 ---
 
