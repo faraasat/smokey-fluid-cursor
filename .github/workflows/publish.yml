@@ -32,7 +32,7 @@ jobs:
         run: |
           rm -rf node_modules package-lock.json
           npm cache clean --force
-          npm ci --ignore-scripts=false
+          npm install
 
       - name: Run release (bump version & create changelog)
         run: npm run release
