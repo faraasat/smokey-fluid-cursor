@@ -1,6 +1,6 @@
 {
   "name": "smokey-fluid-cursor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A customizable fluid cursor effect for React applications. Enhance user experience with smooth, interactive cursor animations. Perfect for modern web designs.",
   "repository": {
     "type": "git",
