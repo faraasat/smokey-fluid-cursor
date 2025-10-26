@@ -1,6 +1,6 @@
 {
   "name": "smokey-fluid-cursor",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A customizable fluid cursor effect for Vanilla JavaScript/TypeScript applications running on the web. Enhance user experience with smooth, interactive cursor animations. Perfect for modern web designs.",
   "repository": {
     "type": "git",
