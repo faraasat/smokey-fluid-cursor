@@ -29,7 +29,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          rm -rf node_modules package-lock.json
+          npm cache clean --force
+          npm ci --ignore-scripts=false
 
       - name: Run release (bump version & create changelog)
         run: npm run release
