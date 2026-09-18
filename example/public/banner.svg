@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="smokey-fluid-cursor">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b0618"/><stop offset="100%" stop-color="#1a0b2e"/>
+    </linearGradient>
+    <radialGradient id="f1" cx="50%" cy="50%"><stop offset="0%" stop-color="#ff4ecd" stop-opacity=".95"/><stop offset="100%" stop-color="#ff4ecd" stop-opacity="0"/></radialGradient>
+    <radialGradient id="f2" cx="50%" cy="50%"><stop offset="0%" stop-color="#4ea8ff" stop-opacity=".9"/><stop offset="100%" stop-color="#4ea8ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="f3" cx="50%" cy="50%"><stop offset="0%" stop-color="#7c4dff" stop-opacity=".85"/><stop offset="100%" stop-color="#7c4dff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="txt" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#ffb3ec"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" rx="24" fill="url(#bg)"/>
+  <ellipse cx="880" cy="120" rx="260" ry="190" fill="url(#f1)"/>
+  <ellipse cx="1040" cy="230" rx="230" ry="160" fill="url(#f2)"/>
+  <ellipse cx="700" cy="230" rx="200" ry="150" fill="url(#f3)"/>
+  <g transform="translate(80 108)">
+    <path d="M0 0 L0 74 L15 60 L26 88 L40 82 L29 54 L48 54 Z" fill="#fff" opacity=".95"/>
+  </g>
+  <text x="152" y="158" font-family="ui-sans-serif,-apple-system,Segoe UI,Inter,Helvetica,Arial" font-size="58" font-weight="800" fill="url(#txt)">smokey-fluid-cursor</text>
+  <text x="152" y="204" font-family="ui-sans-serif,-apple-system,Segoe UI,Inter,Helvetica,Arial" font-size="25" fill="#c9b8e8">WebGL fluid-simulation cursor trails for any website</text>
+  <text x="152" y="246" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="19" fill="#8f7fb5">npm i smokey-fluid-cursor</text>
+</svg>

@@ -8,6 +8,9 @@ import {
   Uniforms,
 } from "./types";
 
+/** Disposer returned when the simulation never started. */
+const noop = () => {};
+
 const defaultConfig = {
   simResolution: 128,
   dyeResolution: 1440,
@@ -39,7 +42,7 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
   const canvas = document.getElementById(config.id) as HTMLCanvasElement | null;
 
   // Exit if canvas not found
-  if (!canvas) return;
+  if (!canvas) return noop;
 
   // Create and inject CSS styles for the canvas
   const style = document.createElement("style");
@@ -79,8 +82,26 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
   const pointers: PointerPrototype[] = [];
   pointers.push(new PointerPrototype());
 
-  // Initialize WebGL context
-  const { gl, ext } = getWebGLContext(canvas);
+  // Initialize WebGL context.
+  //
+  // This effect is purely decorative, so a device without WebGL (or with it
+  // switched off) must not take the host page down. `getWebGLContext` throws,
+  // and from a React effect that throw would escape to the nearest error
+  // boundary and unmount real UI. Bail out quietly instead.
+  let gl: GL;
+  let ext: GLExtInfo;
+  try {
+    ({ gl, ext } = getWebGLContext(canvas));
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      console.warn(
+        "[smokey-fluid-cursor] WebGL is unavailable; the cursor effect is disabled.",
+        err
+      );
+    }
+    style.remove();
+    return noop;
+  }
 
   // Adjust configuration based on WebGL capabilities
   if (!ext.supportLinearFiltering) {
@@ -1120,6 +1141,8 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
   /**
    * Main animation loop
    */
+  let rafHandle = 0;
+
   function update() {
     const dt = calcDeltaTime();
     if (resizeCanvas()) initFramebuffers();
@@ -1127,7 +1150,7 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
     applyInputs();
     step(dt);
     render(null);
-    requestAnimationFrame(update);
+    rafHandle = requestAnimationFrame(update);
   }
 
   /**
@@ -1408,27 +1431,29 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
     return radius;
   }
 
-  // Event listeners for user interaction
+  // Event listeners for user interaction.
+  // Declared as named handlers (rather than inline arrow functions) so that
+  // `dispose()` below can detach every one of them again.
 
-  window.addEventListener("mousedown", (e) => {
+  const onMouseDown = (e: MouseEvent) => {
     const pointer = pointers[0];
     const rect = canvas.getBoundingClientRect();
     const posX = scaleByPixelRatio(e.clientX - rect.left);
     const posY = scaleByPixelRatio(e.clientY - rect.top);
     updatePointerDownData(pointer, -1, posX, posY);
     clickSplat(pointer);
-  });
+  };
 
-  window.addEventListener("mousemove", (e) => {
+  const onMouseMove = (e: MouseEvent) => {
     const pointer = pointers[0];
     const rect = canvas.getBoundingClientRect();
     const posX = scaleByPixelRatio(e.clientX - rect.left);
     const posY = scaleByPixelRatio(e.clientY - rect.top);
     const color = pointer.color;
     updatePointerMoveData(pointer, posX, posY, color);
-  });
+  };
 
-  window.addEventListener("touchstart", (e) => {
+  const onTouchStart = (e: TouchEvent) => {
     const touches = e.targetTouches;
     const rect = canvas.getBoundingClientRect();
     const pointer = pointers[0];
@@ -1438,31 +1463,33 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
       updatePointerDownData(pointer, touches[i].identifier, posX, posY);
       clickSplat(pointer);
     }
-  });
+  };
 
-  window.addEventListener(
-    "touchmove",
-    (e) => {
-      e.preventDefault();
-      const touches = e.targetTouches;
-      const rect = canvas.getBoundingClientRect();
-      const pointer = pointers[0];
-      for (let i = 0; i < touches.length; i++) {
-        const posX = scaleByPixelRatio(touches[i].clientX - rect.left);
-        const posY = scaleByPixelRatio(touches[i].clientY - rect.top);
-        updatePointerMoveData(pointer, posX, posY, pointer.color);
-      }
-    },
-    { passive: false }
-  );
+  const onTouchMove = (e: TouchEvent) => {
+    e.preventDefault();
+    const touches = e.targetTouches;
+    const rect = canvas.getBoundingClientRect();
+    const pointer = pointers[0];
+    for (let i = 0; i < touches.length; i++) {
+      const posX = scaleByPixelRatio(touches[i].clientX - rect.left);
+      const posY = scaleByPixelRatio(touches[i].clientY - rect.top);
+      updatePointerMoveData(pointer, posX, posY, pointer.color);
+    }
+  };
 
-  window.addEventListener("touchend", (e) => {
+  const onTouchEnd = (e: TouchEvent) => {
     const touches = e.changedTouches;
     const pointer = pointers[0];
     for (let i = 0; i < touches.length; i++) {
       updatePointerUpData(pointer);
     }
-  });
+  };
+
+  window.addEventListener("mousedown", onMouseDown);
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("touchstart", onTouchStart);
+  window.addEventListener("touchmove", onTouchMove, { passive: false });
+  window.addEventListener("touchend", onTouchEnd);
 
   /**
    * Updates pointer data when pressed down
@@ -1653,6 +1680,25 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
     return hash;
   }
 
+  /**
+   * Tears the simulation down again: stops the render loop, detaches every
+   * window listener and drops the GL context. Callers that mount the effect
+   * in a component (or re-run it under React StrictMode) must call this on
+   * unmount, otherwise each mount leaks a full simulation.
+   */
+  function dispose() {
+    cancelAnimationFrame(rafHandle);
+    window.removeEventListener("mousedown", onMouseDown);
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("touchstart", onTouchStart);
+    window.removeEventListener("touchmove", onTouchMove);
+    window.removeEventListener("touchend", onTouchEnd);
+    style.remove();
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+  }
+
   // Start the simulation loop
   update();
+
+  return dispose;
 };

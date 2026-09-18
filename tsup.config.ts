@@ -4,16 +4,15 @@ export default defineConfig({
   entry: ["src/index.ts"],
   format: ["cjs", "esm", "iife"],
   dts: true,
-  sourcemap: false,
   clean: true,
-  splitting: true,
-  target: "es2017",
-  external: [],
-  minify: true,
+  target: "es2019",
+  globalName: "SmokeyFluid",
+
+  // `splitting` is incompatible with the iife build and buys nothing for a
+  // single entry point.
+  splitting: false,
+
+  minify: false,
+  sourcemap: true,
   shims: false,
-  minifySyntax: true,
-  minifyIdentifiers: true,
-  minifyWhitespace: true,
-  treeshake: true,
-  globalName: "SmokyFluid",
 });

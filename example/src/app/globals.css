@@ -1,0 +1,130 @@
+:root {
+  --bg: #0b0f17;
+  --panel: #131a26;
+  --panel-2: #1a2333;
+  --border: #253046;
+  --fg: #e8eef8;
+  --muted: #94a3b8;
+  --accent: #6aa9ff;
+  --accent-fg: #04101f;
+  --radius: 14px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); }
+
+.wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 20px 96px;
+}
+
+.hero { margin-bottom: 40px; }
+.hero img { width: 100%; height: auto; border-radius: var(--radius); display: block; }
+
+.hero h1 {
+  font-size: clamp(28px, 5vw, 40px);
+  margin: 28px 0 10px;
+  letter-spacing: -0.02em;
+}
+
+.hero p { color: var(--muted); font-size: 18px; margin: 0; }
+
+.links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+
+.links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: border-color .15s ease, background .15s ease;
+}
+.links a:hover { border-color: var(--accent); background: var(--panel-2); }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 20px 0;
+}
+
+.card h2 { margin: 0 0 6px; font-size: 20px; letter-spacing: -0.01em; }
+.card .sub { color: var(--muted); font-size: 15px; margin: 0 0 18px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+button.demo {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--fg);
+  padding: 9px 16px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color .15s ease;
+}
+button.demo:hover { border-color: var(--accent); }
+button.demo.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+
+pre {
+  background: #080c14;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 13.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1.55;
+}
+
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.state {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.state dt { color: var(--muted); }
+.state dd { margin: 0; }
+
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pill.on { background: #10331f; color: #6ee7a8; }
+.pill.off { background: #3a1620; color: #ff92a5; }
+
+footer {
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 14px;
+}

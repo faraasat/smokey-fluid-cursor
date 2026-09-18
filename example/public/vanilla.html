@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>smokey-fluid-cursor — plain HTML, no bundler</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0b0f17;
+        color: #e8eef8;
+        font-family: ui-sans-serif, -apple-system, "Segoe UI", Inter, sans-serif;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 24px;
+      }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      a { color: #6aa9ff; }
+    </style>
+  </head>
+  <body>
+    <!-- The simulation renders into this canvas. -->
+    <canvas id="smokey-fluid-canvas"></canvas>
+
+    <main>
+      <h1>No bundler required</h1>
+      <p>Move your pointer. This page is a single HTML file using the IIFE build.</p>
+      <p><a href="./">← Back to the main demo</a></p>
+      <pre style="text-align:left"><code>&lt;canvas id="smokey-fluid-canvas"&gt;&lt;/canvas&gt;
+&lt;script src="https://unpkg.com/smokey-fluid-cursor"&gt;&lt;/script&gt;
+&lt;script&gt;
+  var dispose = SmokeyFluid.initFluid();
+&lt;/script&gt;</code></pre>
+    </main>
+
+    <script src="https://unpkg.com/smokey-fluid-cursor"></script>
+    <script>
+      // initFluid returns a disposer; call it to stop the loop and detach
+      // the window listeners again.
+      var dispose = SmokeyFluid.initFluid();
+    </script>
+  </body>
+</html>
