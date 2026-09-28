@@ -14,6 +14,7 @@ test("renders a canvas and starts the simulation", async ({ page }) => {
 
 test("caps the device pixel ratio", async ({ page }) => {
   await page.goto("/");
+  await page.locator("canvas").first().waitFor();
   const info = await page.evaluate(() => {
     const c = document.querySelector("canvas") as HTMLCanvasElement;
     return { backing: c.width, css: c.clientWidth, dpr: window.devicePixelRatio };
@@ -25,6 +26,7 @@ test("caps the device pixel ratio", async ({ page }) => {
 
 test("the canvas does not intercept clicks", async ({ page }) => {
   await page.goto("/");
+  await page.locator("canvas").first().waitFor();
   const pe = await page.locator("canvas").first().evaluate(
     (el) => getComputedStyle(el).pointerEvents
   );
@@ -33,6 +35,7 @@ test("the canvas does not intercept clicks", async ({ page }) => {
 
 test("WebGL actually initialised, with no GL errors", async ({ page }) => {
   await page.goto("/");
+  await page.locator("canvas").first().waitFor();
   const err = await page.evaluate(() => {
     const c = document.querySelector("canvas") as HTMLCanvasElement;
     const gl = c.getContext("webgl2") || c.getContext("webgl");
@@ -94,6 +97,7 @@ import { PNG } from "pngjs";
 const CLIP = { x: 60, y: 240, width: 520, height: 260 };
 
 async function paintAndSample(page: import("@playwright/test").Page) {
+  await page.locator("canvas").first().waitFor();
   // `steps` moves the cursor in one call rather than 40 round trips.
   await page.mouse.move(120, 320);
   await page.mouse.move(640, 400, { steps: 40 });
@@ -113,6 +117,9 @@ async function paintAndSample(page: import("@playwright/test").Page) {
 
 test("the fluid is actually visible on the page", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "pointer-driven");
+  // CI has no GPU and renders through SwiftShader, which is far slower than
+  // the default budget allows for a real fluid simulation.
+  test.setTimeout(120_000);
 
   await page.goto("/");
   await page.waitForTimeout(300);
@@ -124,6 +131,7 @@ test("the fluid is actually visible on the page", async ({ page }, info) => {
 
 test("a palette change reaches the running simulation", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "pointer-driven");
+  test.setTimeout(120_000);
 
   await page.goto("/");
   await page.waitForTimeout(300);
