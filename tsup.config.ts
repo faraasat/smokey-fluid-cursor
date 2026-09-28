@@ -1,18 +1,44 @@
 import { defineConfig } from "tsup";
+import { glslMinifyPlugin } from "./glsl-minify";
 
-export default defineConfig({
+const shared = {
   entry: ["src/index.ts"],
-  format: ["cjs", "esm", "iife"],
-  dts: true,
-  clean: true,
+  clean: false,
   target: "es2019",
-  globalName: "SmokeyFluid",
 
   // `splitting` is incompatible with the iife build and buys nothing for a
   // single entry point.
   splitting: false,
-
-  minify: false,
-  sourcemap: true,
   shims: false,
-});
+
+  // Shader source is ~40% of this bundle and lives in template literals, which
+  // JS minifiers leave untouched. Strip GLSL comments/indentation at build time.
+  esbuildPlugins: [glslMinifyPlugin()],
+} as const;
+
+export default defineConfig([
+  {
+    ...shared,
+    // The package entry: left unminified so the consuming bundler can minify
+    // and tree-shake it in context, and so stack traces stay readable.
+    format: ["cjs", "esm"],
+    dts: true,
+    clean: true,
+    minify: false,
+
+    // Sourcemaps are deliberately not published. They were ~65% of the install
+    // footprint, and this build is already readable. Build from source if you
+    // need to step through it.
+    sourcemap: false,
+  },
+  {
+    ...shared,
+    // The CDN build is loaded straight by the browser with no bundler in
+    // front of it, so here minification is the whole point.
+    format: ["iife"],
+    globalName: "SmokeyFluid",
+    dts: false,
+    minify: true,
+    sourcemap: false,
+  },
+]);

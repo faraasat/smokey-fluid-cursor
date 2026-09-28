@@ -54,80 +54,163 @@ No peer dependencies.
 
 ## Quick start
 
-```html
-<canvas id="smokey-fluid-canvas"></canvas>
-```
-
 ```ts
 import { initFluid } from "smokey-fluid-cursor";
 
-const dispose = initFluid();
+const fluid = initFluid();
 ```
 
-`initFluid` returns a **disposer**. Call it to stop the render loop and detach
-every window listener — required in any single-page app, or each navigation
-leaks a whole simulation:
+That is the whole integration. With no options it creates a full-viewport
+canvas in `<body>`, positioned `fixed`, `pointer-events: none` and behind your
+content, then starts the simulation.
+
+`initFluid` returns a **handle**. Keep it if you need to stop, pause or retune
+the effect later:
 
 ```ts
-dispose();
+fluid.pause();
+fluid.resume();
+fluid.setConfig({ curl: 30 });
+fluid.dispose(); // stops the loop and detaches every listener
 ```
 
-The canvas is positioned `fixed`, full-viewport, `pointer-events: none` and
-`z-index: -9999`, so it sits behind your content and never intercepts clicks.
+Calling `dispose()` is required in any single-page app — otherwise each
+navigation leaks a whole simulation.
+
+### Bring your own canvas
+
+```html
+<canvas id="my-canvas"></canvas>
+```
+
+```ts
+initFluid({ canvas: "#my-canvas" });
+```
+
+### Scope it to one section
+
+Give it a container and switch to `absolute`, and the effect stays inside that
+element instead of covering the page:
+
+```ts
+initFluid({
+  container: "#hero",   // element or selector
+  position: "absolute",
+  zIndex: 0,
+});
+```
+
+The container needs its own positioning context (`position: relative`) and
+`overflow: hidden` if you want the fluid clipped to it.
 
 ## Without a bundler
 
+A **minified** IIFE build is published for no-build pages:
+
 ```html
-<canvas id="smokey-fluid-canvas"></canvas>
 <script src="https://unpkg.com/smokey-fluid-cursor"></script>
 <script>
-  var dispose = SmokeyFluid.initFluid();
+  var fluid = SmokeyFluid.initFluid();
 </script>
 ```
 
+## The handle
+
+| Method | Description |
+| --- | --- |
+| `dispose()` | Stop the loop, detach listeners, release the GL context, remove any canvas this call created. Safe to call twice. |
+| `pause()` | Freeze the simulation, leaving the canvas visible. |
+| `resume()` | Resume after `pause()`. |
+| `isPaused()` | Whether the simulation is currently stopped. |
+| `setConfig(partial)` | Retune in place — no remount. Resolution changes reallocate framebuffers; everything else applies next frame. |
+| `splat(x, y, color?)` | Inject a splash at a point, in CSS pixels relative to the canvas. Drive the effect from something other than the pointer. |
+| `canvas` | The canvas being rendered into. |
+
 ## Configuration
 
-Every field is optional.
+Every option is optional.
+
+### Mounting & placement
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `id` | `string` | `"smokey-fluid-canvas"` | Id of the canvas to render into. |
+| `canvas` | `HTMLCanvasElement \| string` | — | Render into an existing canvas (element or selector). Wins over `id`/`container`. |
+| `container` | `HTMLElement \| string` | `document.body` | Where to create the canvas when none exists. |
+| `id` | `string` | `"smokey-fluid-canvas"` | Id used to find, or assign to, the canvas. |
+| `position` | `"fixed" \| "absolute" \| "relative" \| "static"` | `"fixed"` | `absolute` confines the effect to a positioned container. |
+| `zIndex` | `number` | `-9999` | Stacking order. |
+| `pointerEvents` | `boolean` | `false` | Whether the canvas swallows clicks. |
+| `className` | `string` | — | Extra class on the canvas. |
+
+### Performance & accessibility
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `maxDpr` | `number` | `2` | Caps the device pixel ratio. Uncapped, a 3x phone renders **nine times** the pixels of a 1x display for a decorative effect. |
+| `pauseOnHidden` | `boolean` | `true` | Stop the loop while the tab is in the background. |
+| `respectReducedMotion` | `boolean` | `true` | Start paused when the visitor has `prefers-reduced-motion: reduce`. |
+| `paused` | `boolean` | `false` | Start frozen. |
+
+### Appearance
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `palette` | `string[]` | `null` | Hex colours to draw from, e.g. `["#ff4ecd", "#4ea8ff"]`. Omit for the full random hue range. |
+| `colorIntensity` | `number` | `0.15` | Brightness multiplier. Raise for a bolder trail. |
+| `backColor` | `{ r, g, b }` | `{ r: 0, g: 0, b: 0 }` | Canvas background. |
+| `transparent` | `boolean` | `true` | Blend with the page background. |
+| `shading` | `boolean` | `true` | Lighting, for a sense of depth. |
+| `colorUpdateSpeed` | `number` | `10` | How fast the palette rotates. |
+
+### Simulation
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
 | `simResolution` | `number` | `128` | Velocity/pressure grid. Lower is faster and coarser. |
 | `dyeResolution` | `number` | `1440` | Colour buffer resolution. The main quality/cost dial. |
-| `densityDissipation` | `number` | `3.5` | How fast colour fades. Higher fades sooner. |
+| `densityDissipation` | `number` | `3.5` | How fast colour fades. |
 | `velocityDissipation` | `number` | `2` | How fast motion slows. |
 | `pressure` | `number` | `0.1` | Initial pressure multiplier. |
 | `pressureIteration` | `number` | `20` | Jacobi iterations. Higher is more accurate, slower. |
 | `curl` | `number` | `10` | Vorticity confinement — the swirliness. |
 | `splatRadius` | `number` | `0.5` | Size of each pointer splat. |
 | `splatForce` | `number` | `6000` | Force applied per splat. |
-| `shading` | `boolean` | `true` | Lighting for a sense of depth. |
-| `colorUpdateSpeed` | `number` | `10` | How fast the palette rotates. |
-| `backColor` | `{ r, g, b }` | `{ r: 0, g: 0, b: 0 }` | Canvas background. |
-| `transparent` | `boolean` | `true` | Blend with the page background. |
-| `paused` | `boolean` | `false` | Freeze the simulation. |
-
-```ts
-initFluid({
-  curl: 30,
-  splatForce: 9000,
-  densityDissipation: 2,
-  id: "my-canvas",
-});
-```
 
 ## Performance
 
-The defaults target a modern desktop GPU. On lower-powered devices, drop
-`dyeResolution` to `512` and `pressureIteration` to `10`. The simulation
-automatically lowers quality when the GPU lacks linear filtering for float
-textures.
+The defaults target a modern desktop GPU. The big levers, in order of impact:
+
+1. **`maxDpr`** — already capped at `2`. Drop to `1` for the weakest devices.
+2. **`dyeResolution`** — `512` is noticeably cheaper and still looks good.
+3. **`pressureIteration`** — `10` roughly halves the solver cost.
+
+```ts
+initFluid({ maxDpr: 1, dyeResolution: 512, pressureIteration: 10 });
+```
+
+Quality is also lowered automatically when the GPU lacks linear filtering for
+float textures.
+
+## Accessibility
+
+A full-screen animation is a real problem for people with vestibular
+disorders. By default this package honours `prefers-reduced-motion: reduce` by
+starting paused, and reacts if the preference changes while the page is open.
+Opt out with `respectReducedMotion: false` only if you have a good reason.
+
+## Package size
+
+The published bundle is ~21 kB minified for the CDN build. The npm package
+ships **no sourcemaps** — they were roughly two thirds of the install
+footprint, and the ESM/CJS builds are shipped unminified and readable. Shader
+source is minified at build time, which JS minifiers cannot do because GLSL
+lives in string literals.
 
 ## Browser support
 
-Requires WebGL (WebGL 2 is used when available, with a WebGL 1 fallback). On a
-device without it, `initFluid` logs a warning, renders nothing, and returns a
-no-op disposer — it never throws.
+Requires WebGL (WebGL 2 when available, with a WebGL 1 fallback). Without it
+`initFluid` logs a warning and returns a handle whose `dispose()` still works —
+it never throws, so a decorative effect cannot take down your app.
 
 ## Contributing
 

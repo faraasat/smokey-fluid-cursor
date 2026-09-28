@@ -128,3 +128,44 @@ footer {
   color: var(--muted);
   font-size: 14px;
 }
+
+/* ── demo controls ──────────────────────────────────────────────────────── */
+
+.field { margin-top: 20px; }
+
+.field label {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.field label code {
+  color: var(--fg);
+  font-size: 13px;
+}
+
+.field input[type="range"] {
+  width: 100%;
+  max-width: 420px;
+  accent-color: var(--accent);
+}
+
+.scoped {
+  position: relative;
+  overflow: hidden;
+  height: 260px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #060a12;
+  display: grid;
+  place-items: center;
+}
+
+.scoped span {
+  position: relative;
+  z-index: 1;
+  color: var(--muted);
+  font-size: 14px;
+  pointer-events: none;
+}

@@ -1,15 +1,13 @@
 import {
   DoubleFBO,
   FBO,
+  FluidHandle,
   GL,
   GLExtInfo,
   GLFormat,
   ISmokeyFluidConfig,
   Uniforms,
 } from "./types";
-
-/** Disposer returned when the simulation never started. */
-const noop = () => {};
 
 const defaultConfig = {
   simResolution: 128,
@@ -28,36 +26,100 @@ const defaultConfig = {
   backColor: { r: 0, g: 0, b: 0 },
   transparent: true,
   id: "smokey-fluid-canvas",
+  position: "fixed",
+  zIndex: -9999,
+  pointerEvents: false,
+  maxDpr: 2,
+  pauseOnHidden: true,
+  respectReducedMotion: true,
+  palette: null,
+  colorIntensity: 0.15,
+} satisfies ISmokeyFluidConfig;
+
+/** Resolves an element option that may be an element, a selector, or null. */
+const resolveElement = <T extends Element>(
+  target: T | string | null | undefined
+): T | null => {
+  if (!target) return null;
+  if (typeof target !== "string") return target;
+  // Accept both a bare id ("my-canvas") and a full selector ("#my-canvas").
+  return (document.querySelector(target) ??
+    document.getElementById(target)) as T | null;
+};
+
+/** Parses "#rgb" / "#rrggbb" into the 0-1 RGB triple the simulation uses. */
+const parseHex = (hex: string): { r: number; g: number; b: number } | null => {
+  let h = hex.trim().replace(/^#/, "");
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (!/^[0-9a-f]{6}$/i.test(h)) return null;
+  return {
+    r: parseInt(h.slice(0, 2), 16) / 255,
+    g: parseInt(h.slice(2, 4), 16) / 255,
+    b: parseInt(h.slice(4, 6), 16) / 255,
+  };
+};
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Handle returned when the simulation could not start. */
+const inertHandle: FluidHandle = {
+  dispose: () => {},
+  pause: () => {},
+  resume: () => {},
+  isPaused: () => true,
+  setConfig: () => {},
+  splat: () => {},
+  canvas: null,
 };
 
 /**
  * Initializes and starts the fluid simulation
  * @param incomingConfig - Partial configuration object to override default settings
  */
-export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
+export const initFluid = (
+  incomingConfig: Partial<ISmokeyFluidConfig> = {}
+): FluidHandle => {
   // Merge incoming config with defaults
   const config: ISmokeyFluidConfig = { ...defaultConfig, ...incomingConfig };
 
-  // Get the canvas element by ID
-  const canvas = document.getElementById(config.id) as HTMLCanvasElement | null;
+  // Nothing to render into during SSR.
+  if (typeof document === "undefined") return inertHandle;
 
-  // Exit if canvas not found
-  if (!canvas) return noop;
+  // Resolve the canvas: an explicit element/selector wins, then an existing
+  // element with the configured id, and failing both we create one inside the
+  // container (defaulting to <body>).
+  let ownsCanvas = false;
+  let canvas =
+    resolveElement<HTMLCanvasElement>(config.canvas) ??
+    (document.getElementById(config.id) as HTMLCanvasElement | null);
 
-  // Create and inject CSS styles for the canvas
-  const style = document.createElement("style");
-  style.textContent = `
-    #${config.id} {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: -9999;
-    }
-  `;
-  document.head.appendChild(style);
+  if (!canvas) {
+    const container =
+      resolveElement<HTMLElement>(config.container) ?? document.body;
+    if (!container) return inertHandle;
+    canvas = document.createElement("canvas");
+    canvas.id = config.id;
+    container.appendChild(canvas);
+    ownsCanvas = true;
+  }
+
+  if (config.className) canvas.classList.add(...config.className.split(/\s+/));
+
+  // Placement is applied inline rather than through an injected stylesheet, so
+  // the canvas can be positioned per instance and several simulations can
+  // coexist on one page.
+  const stretch =
+    config.position === "fixed" || config.position === "absolute";
+  Object.assign(canvas.style, {
+    position: config.position,
+    ...(stretch ? { top: "0", left: "0", width: "100%", height: "100%" } : {}),
+    display: "block",
+    pointerEvents: config.pointerEvents ? "auto" : "none",
+    zIndex: String(config.zIndex),
+  } as Partial<CSSStyleDeclaration>);
 
   // Set initial canvas size
   resizeCanvas();
@@ -99,8 +161,28 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
         err
       );
     }
-    style.remove();
-    return noop;
+
+    // Degraded, not dead: the canvas stays where it is (invisible and
+    // non-interactive, so it costs the page nothing) and the caller still gets
+    // a handle whose dispose() tidies up whatever this call created.
+    const mounted = canvas;
+    const created = ownsCanvas;
+    return {
+      ...inertHandle,
+      dispose: () => {
+        if (created) mounted.remove();
+      },
+      // Placement is plain DOM, so it keeps working even with no GL context.
+      setConfig: (partial) => {
+        if (partial.zIndex !== undefined)
+          mounted.style.zIndex = String(partial.zIndex);
+        if (partial.pointerEvents !== undefined)
+          mounted.style.pointerEvents = partial.pointerEvents ? "auto" : "none";
+      },
+      get canvas() {
+        return mounted;
+      },
+    };
   }
 
   // Adjust configuration based on WebGL capabilities
@@ -1148,7 +1230,12 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
     if (resizeCanvas()) initFramebuffers();
     updateColors(dt);
     applyInputs();
-    step(dt);
+
+    // `paused` freezes the physics but keeps presenting the last frame, so the
+    // canvas does not go blank. Previously this option was declared and
+    // defaulted but never actually read.
+    if (!config.paused) step(dt);
+
     render(null);
     rafHandle = requestAnimationFrame(update);
   }
@@ -1561,10 +1648,26 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
    * Generates a random color with reduced intensity
    */
   function generateColor() {
+    const intensity = config.colorIntensity;
+
+    // A configured palette wins over the random full-spectrum hue.
+    const palette = config.palette;
+    if (palette && palette.length > 0) {
+      const picked = palette[Math.floor(Math.random() * palette.length)];
+      const rgb = parseHex(picked);
+      if (rgb) {
+        return {
+          r: rgb.r * intensity,
+          g: rgb.g * intensity,
+          b: rgb.b * intensity,
+        };
+      }
+    }
+
     const c = HSVtoRGB(Math.random(), 1.0, 1.0);
-    c.r *= 0.15;
-    c.g *= 0.15;
-    c.b *= 0.15;
+    c.r *= intensity;
+    c.g *= intensity;
+    c.b *= intensity;
     return c;
   }
 
@@ -1663,7 +1766,12 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
    * Scales value by device pixel ratio for crisp rendering
    */
   function scaleByPixelRatio(input: number) {
-    const pixelRatio = window.devicePixelRatio || 1;
+    // Capped: uncapped, a 3x phone renders nine times the pixels of a 1x
+    // display for a purely decorative effect.
+    const pixelRatio = Math.min(
+      window.devicePixelRatio || 1,
+      Math.max(1, config.maxDpr)
+    );
     return Math.floor(input * pixelRatio);
   }
 
@@ -1687,18 +1795,143 @@ export const initFluid = (incomingConfig: Partial<ISmokeyFluidConfig>) => {
    * unmount, otherwise each mount leaks a full simulation.
    */
   function dispose() {
-    cancelAnimationFrame(rafHandle);
+    if (disposed) return;
+    disposed = true;
+
+    stopLoop();
     window.removeEventListener("mousedown", onMouseDown);
     window.removeEventListener("mousemove", onMouseMove);
     window.removeEventListener("touchstart", onTouchStart);
     window.removeEventListener("touchmove", onTouchMove);
     window.removeEventListener("touchend", onTouchEnd);
-    style.remove();
+    window.removeEventListener("resize", onResize);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    motionQuery?.removeEventListener?.("change", onMotionPreferenceChange);
+    resizeObserver?.disconnect();
+
+    // Only tear down DOM this call created.
+    if (ownsCanvas) canvas?.remove();
+
     gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 
-  // Start the simulation loop
-  update();
+  // ── Loop control ─────────────────────────────────────────────────────────
 
-  return dispose;
+  let disposed = false;
+  let running = false;
+
+  function startLoop() {
+    if (running || disposed) return;
+    running = true;
+    // Reset the clock, otherwise the first frame after a pause integrates the
+    // entire paused duration in one step and the fluid jumps.
+    lastUpdateTime = Date.now();
+    rafHandle = requestAnimationFrame(update);
+  }
+
+  function stopLoop() {
+    running = false;
+    cancelAnimationFrame(rafHandle);
+  }
+
+  // A hidden tab should not burn CPU or battery on a decorative effect.
+  const onVisibilityChange = () => {
+    if (!config.pauseOnHidden) return;
+    if (document.hidden) stopLoop();
+    else if (!userPaused) startLoop();
+  };
+
+  // Keep the backing buffer in step with layout changes, not just window
+  // resizes — an `absolute` canvas inside a resizing container never fired a
+  // window resize event.
+  const onResize = () => resizeCanvas();
+  const resizeObserver =
+    typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => resizeCanvas())
+      : null;
+  resizeObserver?.observe(canvas);
+
+  const motionQuery =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)")
+      : null;
+
+  const onMotionPreferenceChange = () => {
+    if (!config.respectReducedMotion) return;
+    if (motionQuery?.matches) stopLoop();
+    else if (!userPaused) startLoop();
+  };
+
+  let userPaused = false;
+
+  window.addEventListener("resize", onResize);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  motionQuery?.addEventListener?.("change", onMotionPreferenceChange);
+
+  // Visitors who asked for reduced motion get a still canvas until they
+  // explicitly resume.
+  //
+  // Deliberately NOT gated on `document.hidden`: browsers already suspend
+  // requestAnimationFrame for hidden documents, and some embedded contexts
+  // (preview panes, prerenderers) report hidden permanently, which would mean
+  // the effect never starts at all. `pauseOnHidden` still stops the loop on
+  // visibilitychange.
+  if (config.respectReducedMotion && prefersReducedMotion()) {
+    userPaused = true;
+    // Render one frame so the canvas is not simply blank.
+    render(null);
+  } else {
+    startLoop();
+  }
+
+  const handle: FluidHandle = {
+    dispose,
+    pause() {
+      userPaused = true;
+      stopLoop();
+    },
+    resume() {
+      userPaused = false;
+      startLoop();
+    },
+    isPaused: () => userPaused || !running,
+    setConfig(partial) {
+      const needsRealloc =
+        (partial.simResolution !== undefined &&
+          partial.simResolution !== config.simResolution) ||
+        (partial.dyeResolution !== undefined &&
+          partial.dyeResolution !== config.dyeResolution);
+
+      Object.assign(config, partial);
+
+      if (partial.maxDpr !== undefined) resizeCanvas();
+      if (needsRealloc) initFramebuffers();
+      if (partial.zIndex !== undefined)
+        canvas!.style.zIndex = String(partial.zIndex);
+      if (partial.pointerEvents !== undefined)
+        canvas!.style.pointerEvents = partial.pointerEvents ? "auto" : "none";
+    },
+    splat(x, y, color) {
+      const rect = canvas!.getBoundingClientRect();
+      const px = scaleByPixelRatio(x);
+      const py = scaleByPixelRatio(y);
+      void rect;
+      const c = color ?? generateColor();
+      splat(px, canvas!.height - py, 0, 0, c);
+    },
+    get canvas() {
+      return canvas;
+    },
+  };
+
+  return handle;
 };
+
+export type {
+  ISmokeyFluidConfig,
+  FluidHandle,
+  GL,
+  GLExtInfo,
+  FBO,
+  DoubleFBO,
+} from "./types";
