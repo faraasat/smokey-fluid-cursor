@@ -16,6 +16,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip-bump:
+        description: "Publish the version already in package.json (recovery after a failed publish)"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: release
@@ -43,6 +48,22 @@ jobs:
           registry-url: "https://registry.npmjs.org/"
           cache: npm
 
+      # Auth is the step most likely to fail, and npm reports an expired or
+      # read-only token as a 404 on PUT. Check it before anything is bumped,
+      # tagged or pushed, so a bad token cannot leave the repo ahead of npm.
+      - name: Verify npm credentials
+        if: ${{ !inputs.dry-run }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if ! npm whoami >/dev/null 2>&1; then
+            echo "::error::NPM_TOKEN is missing, expired, or lacks publish rights."
+            echo "::error::Create an Automation token at https://www.npmjs.com/settings/~/tokens"
+            echo "::error::then update the NPM_TOKEN repository secret."
+            exit 1
+          fi
+          echo "Authenticated to npm as $(npm whoami)"
+
       - name: Install dependencies
         run: npm ci
 
@@ -62,6 +83,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Bump version & changelog
+        if: ${{ !inputs.skip-bump }}
         run: npm run release -- --release-as ${{ inputs.release-as }}
 
       - name: Read version
@@ -71,15 +93,17 @@ jobs:
       - name: Pack (dry run check)
         run: npm pack --dry-run
 
-      - name: Push version bump and tag
-        if: ${{ !inputs.dry-run }}
-        run: git push origin HEAD --follow-tags
-
+      # Publish first: if it fails, no tag or version bump has been pushed, so
+      # the repository never claims a release that does not exist on npm.
       - name: Publish to npm
         if: ${{ !inputs.dry-run }}
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push version bump and tag
+        if: ${{ !inputs.dry-run && !inputs.skip-bump }}
+        run: git push origin HEAD --follow-tags
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry-run }}
