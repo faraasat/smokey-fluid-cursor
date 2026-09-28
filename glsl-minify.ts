@@ -35,7 +35,7 @@ const GLSL_HINT = /\b(precision\s+(?:lowp|mediump|highp)|gl_FragColor|gl_Positio
 export const glslMinifyPlugin = (): Plugin => ({
   name: "glsl-minify",
   setup(build) {
-    build.onLoad({ filter: /\.ts$/ }, async (args) => {
+    build.onLoad({ filter: /\.tsx?$/ }, async (args) => {
       const fs = await import("node:fs/promises");
       const source = await fs.readFile(args.path, "utf8");
       if (!GLSL_HINT.test(source)) return null;
@@ -52,7 +52,7 @@ export const glslMinifyPlugin = (): Plugin => ({
       if (saved > 0) {
         console.log(`  glsl-minify: ${args.path.split("/").pop()} -${(saved / 1024).toFixed(1)} kB`);
       }
-      return { contents: out, loader: "ts" };
+      return { contents: out, loader: args.path.endsWith(".tsx") ? "tsx" : "ts" };
     });
   },
 });
