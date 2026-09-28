@@ -169,3 +169,10 @@ footer {
   font-size: 14px;
   pointer-events: none;
 }
+
+/* Code blocks scroll horizontally on narrow screens, so they carry
+   tabindex="0" to stay reachable by keyboard. Give that focus a visible ring. */
+pre:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
