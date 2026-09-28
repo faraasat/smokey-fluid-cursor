@@ -13,10 +13,21 @@
 
 * { box-sizing: border-box; }
 
+/* The page background lives on <html>, not <body>.
+   A fixed canvas at a negative z-index paints above the root background but
+   *below* the background of block-level descendants — so an opaque
+   `body { background }` would hide the cursor effect entirely. */
+html {
+  background: var(--bg);
+}
+
+body {
+  background: transparent;
+}
+
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
   color: var(--fg);
   font-family: ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
   line-height: 1.6;

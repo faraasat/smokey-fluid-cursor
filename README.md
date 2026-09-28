@@ -148,6 +148,42 @@ A **minified** IIFE build is published for no-build pages:
 | `splat(x, y, color?)` | Inject a splash at a point, in CSS pixels relative to the canvas. Drive the effect from something other than the pointer. |
 | `canvas` | The canvas being rendered into. |
 
+## The effect is invisible? Check your page background
+
+This is the single most common integration problem, and it looks like the
+package is broken when it is not.
+
+The canvas defaults to `z-index: -9999` so it sits behind your content. Per the
+CSS painting order, a negatively-stacked element paints **above the root
+background but below the background of block-level descendants** — so this
+extremely common setup hides the effect completely:
+
+```css
+/* ✗ body's background paints straight over the canvas */
+body { background: #0b0f17; }
+```
+
+Put the page background on `<html>` instead:
+
+```css
+/* ✓ the canvas paints above the root background, below your content */
+html { background: #0b0f17; }
+body { background: transparent; }
+```
+
+Alternatively, lift the canvas above your background and push your content
+above the canvas:
+
+```tsx
+initFluid({ zIndex: 0 });
+```
+```css
+main { position: relative; z-index: 1; }
+```
+
+In development the package detects this and warns in the console rather than
+leaving you with a blank screen.
+
 ## Configuration
 
 Every option is optional.
