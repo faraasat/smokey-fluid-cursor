@@ -59,6 +59,37 @@ const parseHex = (hex: string): { r: number; g: number; b: number } | null => {
   };
 };
 
+/**
+ * Warns when the page will paint over a canvas placed behind it.
+ *
+ * A fixed element with a negative z-index paints above the root background
+ * but *below* the backgrounds of block-level descendants. So an opaque
+ * `body { background: … }` — an extremely common setup — hides the effect
+ * completely, with no error and nothing obviously wrong to debug.
+ */
+const warnIfOccluded = (zIndex: number) => {
+  if (zIndex >= 0 || typeof document === "undefined") return;
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "production")
+    return;
+
+  const bg = window.getComputedStyle(document.body).backgroundColor;
+  const opaque =
+    !!bg &&
+    bg !== "transparent" &&
+    !/rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/.test(bg);
+
+  if (opaque) {
+    console.warn(
+      "[smokey-fluid-cursor] <body> has an opaque background (" +
+        bg +
+        ") and the canvas sits at z-index " +
+        zIndex +
+        ", so the effect will be painted over and stay invisible.\n" +
+        "Move the background to <html>, or give the canvas a zIndex above your background."
+    );
+  }
+};
+
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
@@ -120,6 +151,8 @@ export const initFluid = (
     pointerEvents: config.pointerEvents ? "auto" : "none",
     zIndex: String(config.zIndex),
   } as Partial<CSSStyleDeclaration>);
+
+  warnIfOccluded(config.zIndex);
 
   // Set initial canvas size
   resizeCanvas();

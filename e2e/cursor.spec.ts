@@ -14,6 +14,7 @@ test("renders a canvas and starts the simulation", async ({ page }) => {
 
 test("caps the device pixel ratio", async ({ page }) => {
   await page.goto("/");
+  await page.locator("canvas").first().waitFor();
   const info = await page.evaluate(() => {
     const c = document.querySelector("canvas") as HTMLCanvasElement;
     return { backing: c.width, css: c.clientWidth, dpr: window.devicePixelRatio };
@@ -25,6 +26,7 @@ test("caps the device pixel ratio", async ({ page }) => {
 
 test("the canvas does not intercept clicks", async ({ page }) => {
   await page.goto("/");
+  await page.locator("canvas").first().waitFor();
   const pe = await page.locator("canvas").first().evaluate(
     (el) => getComputedStyle(el).pointerEvents
   );
@@ -33,6 +35,7 @@ test("the canvas does not intercept clicks", async ({ page }) => {
 
 test("WebGL actually initialised, with no GL errors", async ({ page }) => {
   await page.goto("/");
+  await page.locator("canvas").first().waitFor();
   const err = await page.evaluate(() => {
     const c = document.querySelector("canvas") as HTMLCanvasElement;
     const gl = c.getContext("webgl2") || c.getContext("webgl");
@@ -79,4 +82,71 @@ test("the demo page logs no errors", async ({ page }) => {
   await page.mouse.move(400, 300);
   await page.waitForTimeout(500);
   assertClean();
+});
+
+/**
+ * These assert the effect is actually *visible*, not merely running.
+ *
+ * The canvas sits at a negative z-index, and a fixed element there paints
+ * below the backgrounds of block-level descendants — so an opaque
+ * `body { background }` hid the whole effect while every other check
+ * (canvas present, loop running, no GL errors) still passed.
+ */
+import { PNG } from "pngjs";
+
+const CLIP = { x: 60, y: 240, width: 520, height: 260 };
+
+async function paintAndSample(page: import("@playwright/test").Page) {
+  await page.locator("canvas").first().waitFor();
+  // `steps` moves the cursor in one call rather than 40 round trips.
+  await page.mouse.move(120, 320);
+  await page.mouse.move(640, 400, { steps: 40 });
+  await page.waitForTimeout(450);
+
+  const png = PNG.sync.read(await page.screenshot({ clip: CLIP }));
+  const colours = new Set<string>();
+  let colourful = 0;
+  for (let i = 0; i < png.data.length; i += 4) {
+    const [r, g, b] = [png.data[i], png.data[i + 1], png.data[i + 2]];
+    colours.add(`${r >> 4},${g >> 4},${b >> 4}`);
+    // Saturated pixels: the fluid is coloured, the page chrome is near-grey.
+    if (Math.max(r, g, b) - Math.min(r, g, b) > 24) colourful++;
+  }
+  return { distinct: colours.size, colourful };
+}
+
+test("the fluid is actually visible on the page", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "pointer-driven");
+  // CI has no GPU and renders through SwiftShader, which is far slower than
+  // the default budget allows for a real fluid simulation.
+  test.setTimeout(120_000);
+
+  await page.goto("/");
+  await page.waitForTimeout(300);
+  const { colourful } = await paintAndSample(page);
+
+  // With the effect hidden behind an opaque body background this was 0.
+  expect(colourful, "no coloured fluid pixels — the canvas is being painted over").toBeGreaterThan(300);
+});
+
+test("a palette change reaches the running simulation", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "pointer-driven");
+  test.setTimeout(120_000);
+
+  await page.goto("/");
+  await page.waitForTimeout(300);
+
+  // Mono draws white-ish trails; Sunset draws warm ones. Sampling the hue of
+  // what is actually on screen proves setConfig reached the simulation,
+  // rather than merely that the button updated some React state.
+  await page.getByRole("button", { name: "Mono" }).click();
+  const mono = await paintAndSample(page);
+
+  await page.getByRole("button", { name: "Sunset" }).click();
+  const sunset = await paintAndSample(page);
+
+  expect(mono.colourful, "Mono rendered nothing").toBeGreaterThan(100);
+  expect(sunset.colourful, "Sunset rendered nothing").toBeGreaterThan(100);
+  // Sunset is saturated where Mono is not, so it must be the more colourful.
+  expect(sunset.colourful).toBeGreaterThan(mono.colourful);
 });
