@@ -132,7 +132,7 @@ export default function Home() {
 
       <section className="card">
         <h2>Usage</h2>
-        <pre>{`import { initFluid } from "smokey-fluid-cursor";
+        <pre tabIndex={0}>{`import { initFluid } from "smokey-fluid-cursor";
 
 const fluid = initFluid();
 
@@ -147,7 +147,7 @@ fluid.dispose();`}</pre>
           A minified IIFE build ships for no-build pages —{" "}
           <a href="./vanilla.html">see it running in a single HTML file</a>.
         </p>
-        <pre>{`<script src="https://unpkg.com/smokey-fluid-cursor"></script>
+        <pre tabIndex={0}>{`<script src="https://unpkg.com/smokey-fluid-cursor"></script>
 <script>
   var fluid = SmokeyFluid.initFluid();
 </script>`}</pre>
