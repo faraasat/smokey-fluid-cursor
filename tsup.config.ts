@@ -19,12 +19,13 @@ const shared = {
 export default defineConfig([
   {
     ...shared,
-    // The package entry: left unminified so the consuming bundler can minify
-    // and tree-shake it in context, and so stack traces stay readable.
     format: ["cjs", "esm"],
     dts: true,
     clean: true,
-    minify: false,
+    // Minified: this is what actually ships to a visitor's browser, and it
+    // keeps the install footprint small. Build from source if you need to
+    // step through it.
+    minify: true,
 
     // Sourcemaps are deliberately not published. They were ~65% of the install
     // footprint, and this build is already readable. Build from source if you

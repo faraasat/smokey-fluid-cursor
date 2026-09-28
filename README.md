@@ -200,11 +200,11 @@ Opt out with `respectReducedMotion: false` only if you have a good reason.
 
 ## Package size
 
-The published bundle is ~21 kB minified for the CDN build. The npm package
-ships **no sourcemaps** — they were roughly two thirds of the install
-footprint, and the ESM/CJS builds are shipped unminified and readable. Shader
-source is minified at build time, which JS minifiers cannot do because GLSL
-lives in string literals.
+All builds are minified and the package ships **no sourcemaps**. Shader source
+is additionally minified at build time — GLSL lives in template literals, which
+JS minifiers cannot touch, and it is ~40% of this bundle. That kept the
+JavaScript payload flat at ~21 kB even though this release adds mounting,
+placement, palette, lifecycle and handle APIs.
 
 ## Browser support
 
