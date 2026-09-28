@@ -52,6 +52,28 @@ bun add smokey-fluid-cursor
 
 No peer dependencies.
 
+## Upgrading from 1.x
+
+`2.0.0` adds mounting, placement, lifecycle and palette APIs. Most projects
+need no changes, but four behaviours differ:
+
+| Change | Impact | What to do |
+| --- | --- | --- |
+| **Placement is applied inline**, not through an injected `<style>` block | CSS you wrote against `#smokey-fluid-canvas` to override `position`, `z-index` or size no longer wins | Use the `position`, `zIndex`, `pointerEvents` and `className` options instead, or add `!important` to your rules |
+| **The canvas is created for you** when none matches | Calling `initFluid()` with no canvas in the DOM used to do nothing; it now appends one to `<body>` | Pass `canvas` or `container` to control where it goes |
+| **Device pixel ratio is capped at 2** (`maxDpr`) | Slightly softer rendering on 3x displays, markedly better frame rate and battery | Set `maxDpr: Infinity` for the old behaviour |
+| **`prefers-reduced-motion` is honoured** | Visitors who asked for reduced motion get a still canvas | Set `respectReducedMotion: false` to opt out |
+
+`initFluid` also now returns a handle rather than nothing — purely additive,
+but you should start calling `dispose()` in single-page apps:
+
+```diff
+- initFluid();
++ const fluid = initFluid();
++ // on teardown:
++ fluid.dispose();
+```
+
 ## Quick start
 
 ```ts
