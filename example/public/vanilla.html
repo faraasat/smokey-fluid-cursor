@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>smokey-fluid-cursor — plain HTML, no bundler</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0b0f17;
+        color: #e8eef8;
+        font-family: ui-sans-serif, -apple-system, "Segoe UI", Inter, sans-serif;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        line-height: 1.6;
+      }
+      main { max-width: 640px; text-align: center; }
+      pre {
+        text-align: left;
+        background: #080c14;
+        border: 1px solid #253046;
+        border-radius: 10px;
+        padding: 16px;
+        overflow-x: auto;
+        font-size: 13px;
+      }
+      a { color: #6aa9ff; }
+      button {
+        appearance: none;
+        border: 1px solid #253046;
+        background: #1a2333;
+        color: inherit;
+        font: inherit;
+        padding: 9px 16px;
+        border-radius: 9px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>No bundler required</h1>
+      <p>Move your pointer. This page is a single HTML file using the minified IIFE build.</p>
+      <p>
+        <button id="toggle">Pause</button>
+        <a href="./">← Back to the main demo</a>
+      </p>
+      <pre><code>&lt;script src="https://unpkg.com/smokey-fluid-cursor"&gt;&lt;/script&gt;
+&lt;script&gt;
+  var fluid = SmokeyFluid.initFluid();
+&lt;/script&gt;</code></pre>
+    </main>
+
+    <script src="https://unpkg.com/smokey-fluid-cursor"></script>
+    <script>
+      // initFluid creates its own canvas and returns a handle.
+      var fluid = SmokeyFluid.initFluid({ palette: ["#ff4ecd", "#4ea8ff", "#7c4dff"] });
+
+      var btn = document.getElementById("toggle");
+      btn.addEventListener("click", function () {
+        if (fluid.isPaused()) {
+          fluid.resume();
+          btn.textContent = "Pause";
+        } else {
+          fluid.pause();
+          btn.textContent = "Resume";
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -214,4 +214,111 @@ export interface ISmokeyFluidConfig {
    * Default is "smokey-fluid-canvas".
    */
   id: string;
+
+  // ── Mounting ────────────────────────────────────────────────────────────
+
+  /**
+   * An existing canvas to render into — an element, or a CSS selector.
+   *
+   * Takes precedence over `id` and `container`. Use this when the canvas is
+   * already part of your markup or managed by a framework.
+   */
+  canvas?: HTMLCanvasElement | string | null;
+
+  /**
+   * Element (or CSS selector) to create the canvas inside, when no canvas
+   * matches `canvas`/`id` yet.
+   *
+   * Defaults to `document.body`, which with `position: "fixed"` gives the
+   * classic full-viewport effect. Point it at a section to scope the effect
+   * to just that area.
+   */
+  container?: HTMLElement | string | null;
+
+  // ── Placement ───────────────────────────────────────────────────────────
+
+  /**
+   * CSS position for the canvas. Use `"absolute"` to confine the effect to a
+   * positioned container; `"fixed"` covers the viewport. Default `"fixed"`.
+   */
+  position: "fixed" | "absolute" | "static" | "relative";
+
+  /** Stacking order of the canvas. Default `-9999` (behind page content). */
+  zIndex: number;
+
+  /**
+   * Whether the canvas receives pointer events. Default `false`, so clicks
+   * pass straight through to your UI.
+   */
+  pointerEvents: boolean;
+
+  /** Extra class name applied to the canvas element. */
+  className?: string;
+
+  // ── Performance ─────────────────────────────────────────────────────────
+
+  /**
+   * Upper bound on the device pixel ratio used for the render buffers.
+   *
+   * Default `2`. Uncapped, a 3x phone renders nine times the pixels of a 1x
+   * display for a purely decorative effect, which drains battery and drops
+   * frame rate.
+   */
+  maxDpr: number;
+
+  /**
+   * Pause the simulation while the page is hidden (background tab). Default
+   * `true` — an invisible animation should not burn CPU or battery.
+   */
+  pauseOnHidden: boolean;
+
+  /**
+   * Honour the `prefers-reduced-motion` media query. When the visitor has
+   * asked for reduced motion the simulation starts paused. Default `true`.
+   */
+  respectReducedMotion: boolean;
+
+  // ── Appearance ──────────────────────────────────────────────────────────
+
+  /**
+   * Colour palette for the fluid, as CSS hex strings (e.g. `["#ff4ecd"]`).
+   *
+   * When omitted, colours are generated randomly across the full hue range,
+   * which is the original behaviour.
+   */
+  palette?: string[] | null;
+
+  /**
+   * Brightness multiplier applied to generated colours. Default `0.15`;
+   * raise it for a more saturated, higher-contrast trail.
+   */
+  colorIntensity: number;
+}
+
+/**
+ * Controls returned by {@link initFluid}.
+ */
+export interface FluidHandle {
+  /** Stop the render loop, detach listeners and release the GL context. */
+  dispose(): void;
+  /** Pause the simulation, leaving the canvas in place. */
+  pause(): void;
+  /** Resume after {@link FluidHandle.pause}. */
+  resume(): void;
+  /** Whether the simulation is currently paused. */
+  isPaused(): boolean;
+  /**
+   * Update tunable options in place, without tearing the simulation down.
+   *
+   * Resolution options (`simResolution`, `dyeResolution`) reallocate the
+   * framebuffers; everything else applies on the next frame.
+   */
+  setConfig(partial: Partial<ISmokeyFluidConfig>): void;
+  /**
+   * Inject a splash at a point, in CSS pixels relative to the canvas.
+   * Useful for driving the effect from something other than the pointer.
+   */
+  splat(x: number, y: number, color?: { r: number; g: number; b: number }): void;
+  /** The canvas being rendered into. */
+  readonly canvas: HTMLCanvasElement | null;
 }

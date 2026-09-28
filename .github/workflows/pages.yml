@@ -1,0 +1,68 @@
+name: Deploy example to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow one concurrent deployment, never cancel a running one mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Use Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      # The example consumes the package from source (file:..), so the demo
+      # always reflects this commit rather than the last npm release.
+      - name: Install & build package
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install example dependencies
+        working-directory: example
+        run: npm install
+
+      - name: Build example (static export)
+        working-directory: example
+        env:
+          NEXT_PUBLIC_BASE_PATH: /smokey-fluid-cursor
+          NEXT_PUBLIC_APTABASE_KEY: ${{ vars.APTABASE_APP_KEY || 'A-EU-0600644127' }}
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID || 'G-JQTD1RJ6X4' }}
+        run: npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: example/out
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
