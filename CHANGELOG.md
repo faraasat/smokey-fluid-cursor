@@ -7,7 +7,15 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-* mountable/positionable canvas, live controls, 58% smaller package ([a769c1d](https://github.com/faraasat/smokey-fluid-cursor/commit/a769c1d0aea6fc3d9e26ad210af12756dfdbaa72))
+* mountable/positionable canvas, live controls, and a build-time GLSL minifier that keeps the JavaScript payload flat at ~21 kB despite the new APIs (note: the original commit subject claimed "58% smaller package", which compared against an intermediate branch state rather than the published 1.0.7 — see the size note below) ([a769c1d](https://github.com/faraasat/smokey-fluid-cursor/commit/a769c1d0aea6fc3d9e26ad210af12756dfdbaa72))
+
+
+### Package size
+
+Measured against the published 1.0.7, this release is **larger**, not smaller:
+22 kB packed vs 9 kB. The JavaScript payload is essentially unchanged; the
+growth is the `index.d.mts` required for correct ESM type resolution, much
+richer JSDoc in the declarations, and genuinely more code.
 
 
 ### Bug Fixes
