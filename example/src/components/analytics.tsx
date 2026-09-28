@@ -13,7 +13,20 @@ const APTABASE_KEY = process.env.NEXT_PUBLIC_APTABASE_KEY;
  * telemetry of any kind. This runs on the GitHub Pages demo so we can see
  * which examples people actually use.
  */
-export function Analytics({ packageName }: { packageName: string }) {
+export function Analytics({
+  packageName,
+  /**
+   * Load Google Analytics from here.
+   *
+   * Set `false` when something else on the page owns gtag — the consent demo
+   * lets `CookieConsent` inject it *after* the visitor agrees, which is the
+   * entire point of that package.
+   */
+  googleAnalytics = true,
+}: {
+  packageName: string;
+  googleAnalytics?: boolean;
+}) {
   useEffect(() => {
     if (!APTABASE_KEY) return;
 
@@ -35,7 +48,7 @@ export function Analytics({ packageName }: { packageName: string }) {
     };
   }, [packageName]);
 
-  if (!GA_ID) return null;
+  if (!googleAnalytics || !GA_ID) return null;
 
   return (
     <>
