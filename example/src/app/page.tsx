@@ -1,45 +1,66 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { initFluid } from "smokey-fluid-cursor";
-import type { FluidHandle } from "smokey-fluid-cursor";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { initFluid, presets, presetNames, paletteNames, characterNames } from "smokey-fluid-cursor";
+import type { FluidHandle, Preset, PresetName } from "smokey-fluid-cursor";
 import { Hero } from "@/components/hero";
 import { Footer } from "@/components/footer";
+import { Code } from "@/components/code";
 import { track } from "@/components/analytics";
 
-const PALETTES: Record<string, string[] | null> = {
-  Spectrum: null,
-  Sunset: ["#ff4ecd", "#ff8a4e", "#ffd24e"],
-  Ocean: ["#4ea8ff", "#4effd2", "#7c4dff"],
-  Mono: ["#ffffff"],
-};
-
 export default function Home() {
-  const handleRef = useRef<FluidHandle | null>(null);
+  const fluid = useRef<FluidHandle | null>(null);
   const [paused, setPaused] = useState(false);
-  const [palette, setPalette] = useState("Spectrum");
-  const [curl, setCurl] = useState(10);
-  const [intensity, setIntensity] = useState(0.15);
+  const [preset, setPreset] = useState<PresetName>("Spectrum Flow");
+  const [palette, setPalette] = useState<string>("");
+  const [query, setQuery] = useState("");
+
+  // Overrides layered on top of the chosen preset.
+  const [curl, setCurl] = useState<number | null>(null);
+  const [intensity, setIntensity] = useState<number | null>(null);
+
+  /** The configuration currently driving both simulations on this page. */
+  const active: Preset = useMemo(() => {
+    const base = presets[preset];
+    return {
+      ...base,
+      ...(curl !== null ? { curl } : {}),
+      ...(intensity !== null ? { colorIntensity: intensity } : {}),
+    };
+  }, [preset, curl, intensity]);
 
   useEffect(() => {
-    // initFluid creates its own canvas when none exists, and returns a handle
-    // that tears everything down again.
-    const handle = initFluid({ id: "demo-canvas" });
-    handleRef.current = handle;
+    const handle = initFluid({ id: "demo-canvas", ...active });
+    fluid.current = handle;
     setPaused(handle.isPaused());
     return () => handle.dispose();
-  }, []);
+    // Re-created only when the preset changes; cheap tweaks go through
+    // setConfig below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset]);
 
-  const apply = (patch: Parameters<FluidHandle["setConfig"]>[0]) =>
-    handleRef.current?.setConfig(patch);
+  // Slider changes are pushed into the running simulation, not remounted.
+  useEffect(() => {
+    fluid.current?.setConfig(active);
+  }, [active]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return q ? presetNames.filter((n) => n.toLowerCase().includes(q)) : presetNames;
+  }, [query]);
+
+  const choose = (name: PresetName) => {
+    setPreset(name);
+    setCurl(null);
+    setIntensity(null);
+    track("preset_selected", { preset: name });
+  };
 
   const toggle = () => {
-    const h = handleRef.current;
+    const h = fluid.current;
     if (!h) return;
-    if (h.isPaused()) h.resume();
-    else h.pause();
+    h.isPaused() ? h.resume() : h.pause();
     setPaused(h.isPaused());
-    track("simulation_toggled", { paused: h.isPaused() });
   };
 
   return (
@@ -49,8 +70,8 @@ export default function Home() {
       <section className="card">
         <h2>Live controls</h2>
         <p className="sub">
-          Move your pointer anywhere on the page. Every control below calls{" "}
-          <code>setConfig()</code> on the running simulation — nothing is
+          Move your pointer anywhere on the page. Everything below retunes the
+          running simulation through <code>setConfig()</code> — nothing is
           remounted.
         </p>
 
@@ -61,48 +82,27 @@ export default function Home() {
           <span className={`pill ${paused ? "off" : "on"}`}>
             {paused ? "paused" : "running"}
           </span>
-        </div>
-
-        <div className="field">
-          <label htmlFor="palette">Palette</label>
-          <div className="row" id="palette">
-            {Object.keys(PALETTES).map((name) => (
-              <button
-                key={name}
-                className={`demo${palette === name ? " primary" : ""}`}
-                onClick={() => {
-                  setPalette(name);
-                  apply({ palette: PALETTES[name] });
-                  track("palette_changed", { palette: name });
-                }}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
+          <span className="pill">{preset}</span>
         </div>
 
         <div className="field">
           <label htmlFor="curl">
-            Swirl <code>curl: {curl}</code>
+            Swirl <code>curl: {curl ?? active.curl}</code>
           </label>
           <input
             id="curl"
             type="range"
             min={0}
             max={50}
-            value={curl}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setCurl(v);
-              apply({ curl: v });
-            }}
+            value={curl ?? active.curl ?? 10}
+            onChange={(e) => setCurl(Number(e.target.value))}
           />
         </div>
 
         <div className="field">
           <label htmlFor="intensity">
-            Brightness <code>colorIntensity: {intensity.toFixed(2)}</code>
+            Brightness{" "}
+            <code>colorIntensity: {(intensity ?? active.colorIntensity ?? 0.15).toFixed(2)}</code>
           </label>
           <input
             id="intensity"
@@ -110,35 +110,90 @@ export default function Home() {
             min={0.05}
             max={0.6}
             step={0.05}
-            value={intensity}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setIntensity(v);
-              apply({ colorIntensity: v });
-            }}
+            value={intensity ?? active.colorIntensity ?? 0.15}
+            onChange={(e) => setIntensity(Number(e.target.value))}
           />
         </div>
+      </section>
+
+      <section className="card">
+        <h2>100 presets</h2>
+        <p className="sub">
+          Every palette crossed with every motion character, shipped in the
+          package as <code>presets</code>. {paletteNames.length} palettes ×{" "}
+          {characterNames.length} characters.
+        </p>
+
+        <div className="preset-filter">
+          <input
+            type="search"
+            className="preset-search"
+            placeholder={`Filter ${presetNames.length} presets…`}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Filter presets"
+          />
+          <div className="row">
+            {paletteNames.slice(0, 6).map((p) => (
+              <button
+                key={p}
+                className={`demo${palette === p ? " primary" : ""}`}
+                onClick={() => {
+                  const next = palette === p ? "" : p;
+                  setPalette(next);
+                  setQuery(next);
+                }}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p className="sub" style={{ marginTop: 14 }}>
+          Showing {visible.length} of {presetNames.length}
+        </p>
+
+        <ul className="presets">
+          {visible.map((name) => (
+            <li key={name}>
+              <button
+                className={`preset${preset === name ? " is-active" : ""}`}
+                onClick={() => choose(name)}
+                aria-pressed={preset === name}
+              >
+                <span className="preset__swatch" aria-hidden="true">
+                  {(presets[name].palette ?? ["#ff4ecd", "#4ea8ff", "#ffd24e"]).map((c, i) => (
+                    <i key={i} style={{ background: c }} />
+                  ))}
+                </span>
+                <span className="preset__name">{name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="card">
         <h2>Scoped to a container</h2>
         <p className="sub">
           With <code>position: &quot;absolute&quot;</code> and a{" "}
-          <code>container</code>, the effect stays inside one element instead of
-          covering the viewport.
+          <code>container</code>, the effect stays inside one element. This one
+          follows the controls above, so you can compare the same settings at
+          two scales.
         </p>
-        <ScopedDemo />
+        <ScopedDemo config={active} />
       </section>
 
       <section className="card">
         <h2>Usage</h2>
-        <pre tabIndex={0}>{`import { initFluid } from "smokey-fluid-cursor";
+        <Code language="tsx">{`import { initFluid, presets } from "smokey-fluid-cursor";
 
-const fluid = initFluid();
+const fluid = initFluid(presets["Ocean Swirl"]);
 
 fluid.pause();
-fluid.setConfig({ curl: 30, palette: ["#ff4ecd"] });
-fluid.dispose();`}</pre>
+fluid.setConfig({ curl: 30 });
+fluid.dispose();`}</Code>
       </section>
 
       <section className="card">
@@ -147,10 +202,10 @@ fluid.dispose();`}</pre>
           A minified IIFE build ships for no-build pages —{" "}
           <a href="./vanilla.html">see it running in a single HTML file</a>.
         </p>
-        <pre tabIndex={0}>{`<script src="https://unpkg.com/smokey-fluid-cursor"></script>
+        <Code language="html">{`<script src="https://unpkg.com/smokey-fluid-cursor"></script>
 <script>
-  var fluid = SmokeyFluid.initFluid();
-</script>`}</pre>
+  var fluid = SmokeyFluid.initFluid(SmokeyFluid.presets["Magma Storm"]);
+</script>`}</Code>
       </section>
 
       <Footer />
@@ -158,21 +213,31 @@ fluid.dispose();`}</pre>
   );
 }
 
-function ScopedDemo() {
+/** A second simulation, scoped to its own box, driven by the same config. */
+function ScopedDemo({ config }: { config: Preset }) {
   const boxRef = useRef<HTMLDivElement>(null);
+  const handle = useRef<FluidHandle | null>(null);
 
   useEffect(() => {
     if (!boxRef.current) return;
-    const handle = initFluid({
+    const h = initFluid({
       id: "scoped-canvas",
       container: boxRef.current,
       position: "absolute",
       zIndex: 0,
-      palette: ["#4ea8ff", "#7c4dff"],
+      // Cheaper: this canvas is a fraction of the viewport.
       dyeResolution: 512,
+      ...config,
     });
-    return () => handle.dispose();
+    handle.current = h;
+    return () => h.dispose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep it in step with the controls above rather than running its own look.
+  useEffect(() => {
+    handle.current?.setConfig(config);
+  }, [config]);
 
   return (
     <div ref={boxRef} className="scoped">

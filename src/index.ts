@@ -1968,3 +1968,17 @@ export type {
   FBO,
   DoubleFBO,
 } from "./types";
+
+export {
+  presets,
+  presetNames,
+  paletteNames,
+  characterNames,
+  getPreset,
+} from "./presets";
+export type {
+  Preset,
+  PresetName,
+  PaletteName,
+  CharacterName,
+} from "./presets";
