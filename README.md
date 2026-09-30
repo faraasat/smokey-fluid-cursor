@@ -184,6 +184,44 @@ main { position: relative; z-index: 1; }
 In development the package detects this and warns in the console rather than
 leaving you with a blank screen.
 
+## Presets
+
+100 ready-made looks ship with the package — every colour palette crossed with
+every motion character, named `"<Palette> <Character>"`:
+
+```tsx
+import { presets } from "smokey-fluid-cursor";
+
+initFluid(presets["Ocean Swirl"]);
+```
+
+| | |
+| --- | --- |
+| **Palettes** (20) | Spectrum, Sunset, Ocean, Mono, Aurora, Ember, Lagoon, Candy, Toxic, Royal, Sakura, Mint, Copper, Ultraviolet, Ice, Magma, Forest, Dusk, Cyber, Pastel |
+| **Characters** (5) | Calm, Flow, Swirl, Storm, Wisp |
+
+So `"Magma Storm"` is the magma palette at storm intensity, `"Ice Wisp"` is
+pale and sparse, and so on.
+
+Presets only set **appearance and physics** — never mounting or placement — so
+they compose with your own `container`, `zIndex` and the rest:
+
+```tsx
+initFluid({ ...presets["Cyber Swirl"], container: "#hero", position: "absolute" });
+```
+
+Browse all 100 on the [live demo](https://faraasat.github.io/smokey-fluid-cursor/).
+
+### Helpers
+
+| Export | Type | Description |
+| --- | --- | --- |
+| `presets` | `Record<PresetName, Preset>` | Every preset, keyed by name. |
+| `presetNames` | `PresetName[]` | All 100 names, in order. |
+| `paletteNames` | `PaletteName[]` | The 20 palettes. |
+| `characterNames` | `CharacterName[]` | The 5 motion characters. |
+| `getPreset(name)` | `Preset \| undefined` | Safe lookup for a user-supplied name. |
+
 ## Configuration
 
 Every option is optional.

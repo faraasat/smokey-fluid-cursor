@@ -103,16 +103,42 @@ async function paintAndSample(page: import("@playwright/test").Page) {
   await page.mouse.move(640, 400, { steps: 40 });
   await page.waitForTimeout(450);
 
+  // Hide the page content so only the fluid canvas is composited. Without
+  // this the sample also counts UI chrome — the preset swatches alone are
+  // hundreds of coloured pixels, which swamps the signal being measured.
+  await page.evaluate(() => {
+    const main = document.querySelector("main");
+    if (main) (main as HTMLElement).style.visibility = "hidden";
+    const nav = document.querySelector(".topnav");
+    if (nav) (nav as HTMLElement).style.visibility = "hidden";
+  });
+
   const png = PNG.sync.read(await page.screenshot({ clip: CLIP }));
+
+  await page.evaluate(() => {
+    const main = document.querySelector("main");
+    if (main) (main as HTMLElement).style.visibility = "";
+    const nav = document.querySelector(".topnav");
+    if (nav) (nav as HTMLElement).style.visibility = "";
+  });
   const colours = new Set<string>();
   let colourful = 0;
+  // Mean colour of the lit pixels — a stable signature of the palette in use.
+  let rSum = 0, gSum = 0, bSum = 0, lit = 0;
+
   for (let i = 0; i < png.data.length; i += 4) {
     const [r, g, b] = [png.data[i], png.data[i + 1], png.data[i + 2]];
     colours.add(`${r >> 4},${g >> 4},${b >> 4}`);
     // Saturated pixels: the fluid is coloured, the page chrome is near-grey.
     if (Math.max(r, g, b) - Math.min(r, g, b) > 24) colourful++;
+    if (r + g + b > 40) { rSum += r; gSum += g; bSum += b; lit++; }
   }
-  return { distinct: colours.size, colourful };
+
+  const mean = lit
+    ? { r: rSum / lit, g: gSum / lit, b: bSum / lit }
+    : { r: 0, g: 0, b: 0 };
+
+  return { distinct: colours.size, colourful, mean, lit };
 }
 
 test("the fluid is actually visible on the page", async ({ page }, info) => {
@@ -136,17 +162,27 @@ test("a palette change reaches the running simulation", async ({ page }, info) =
   await page.goto("/");
   await page.waitForTimeout(300);
 
-  // Mono draws white-ish trails; Sunset draws warm ones. Sampling the hue of
-  // what is actually on screen proves setConfig reached the simulation,
-  // rather than merely that the button updated some React state.
-  await page.getByRole("button", { name: "Mono" }).click();
+  // "Mono Flow" draws white-ish trails; "Sunset Flow" draws warm ones.
+  // Sampling the hue of what is actually on screen proves setConfig reached
+  // the simulation, rather than merely that React state updated.
+  await page.getByRole("button", { name: "Mono Flow", exact: true }).click();
   const mono = await paintAndSample(page);
 
-  await page.getByRole("button", { name: "Sunset" }).click();
+  await page.getByRole("button", { name: "Sunset Flow", exact: true }).click();
   const sunset = await paintAndSample(page);
 
-  expect(mono.colourful, "Mono rendered nothing").toBeGreaterThan(100);
-  expect(sunset.colourful, "Sunset rendered nothing").toBeGreaterThan(100);
-  // Sunset is saturated where Mono is not, so it must be the more colourful.
-  expect(sunset.colourful).toBeGreaterThan(mono.colourful);
+  expect(mono.lit, "Mono rendered nothing").toBeGreaterThan(100);
+  expect(sunset.lit, "Sunset rendered nothing").toBeGreaterThan(100);
+
+  // Assert the picture actually changed, rather than which palette is
+  // "more colourful" — that magnitude comparison is noisy, because blended
+  // white trails are themselves far from grey. A shift in the mean colour of
+  // the lit pixels is the direct evidence that setConfig reached the
+  // simulation.
+  const shift =
+    Math.abs(mono.mean.r - sunset.mean.r) +
+    Math.abs(mono.mean.g - sunset.mean.g) +
+    Math.abs(mono.mean.b - sunset.mean.b);
+
+  expect(shift, `palette change did not alter the rendered output (mono=${JSON.stringify(mono.mean)} sunset=${JSON.stringify(sunset.mean)})`).toBeGreaterThan(6);
 });
