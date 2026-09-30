@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.1.0](https://github.com/faraasat/smokey-fluid-cursor/compare/v2.0.0...v2.1.0) (2026-09-30)
+
+
+### Features
+
+* 100 presets, syntax-highlighted demo, top nav ([7759319](https://github.com/faraasat/smokey-fluid-cursor/commit/7759319e71666a80548b0ada76e8db86a38ebabe))
+
+
+### Bug Fixes
+
+* the cursor effect was painted over and invisible ([a145730](https://github.com/faraasat/smokey-fluid-cursor/commit/a145730415b4aca90dde8aa3a2aa9c802fff0a25))
+
 ## [2.0.0](https://github.com/faraasat/smokey-fluid-cursor/compare/v1.0.7...v2.0.0) (2026-09-28)
 
 
